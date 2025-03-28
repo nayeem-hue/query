@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="An accessible Wikipedia Q&A system that provides comprehensive answers to your questions">
+    <title>Enhanced Wikipedia Q&A - Ask Any Question</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Skip to main content link for keyboard users -->
+    <a href="#mainContent" class="skip-link">Skip to main content</a>
+
+    <div class="container" role="main">
+        <header role="banner">
+            <h1>
+                <i class="fas fa-brain" aria-hidden="true"></i>
+                <span>Smart Wikipedia Q&A</span>
+            </h1>
+            <!-- Add language selector -->
+            <div class="language-selector">
+                <label for="language">Select Language:</label>
+                <select id="language" name="language">
+                    <option value="en">English</option>
+                    <option value="es">Español</option>
+                    <option value="fr">Français</option>
+                    <!-- Add more languages as needed -->
+                </select>
+            </div>
+            <!-- Add text size controls -->
+            <div class="text-controls" role="group" aria-label="Text size controls">
+                <button type="button" class="text-size-btn" aria-label="Decrease text size" onclick="adjustTextSize(-1)">A-</button>
+                <button type="button" class="text-size-btn" aria-label="Reset text size" onclick="resetTextSize()">Reset</button>
+                <button type="button" class="text-size-btn" aria-label="Increase text size" onclick="adjustTextSize(1)">A+</button>
+            </div>
+            <!-- Add high contrast toggle -->
+            <button type="button" class="contrast-toggle" aria-label="Toggle high contrast mode" onclick="toggleContrast()">
+                <i class="fas fa-adjust" aria-hidden="true"></i>
+                <span>High Contrast</span>
+            </button>
+        </header>
+        
+        <main id="mainContent" tabindex="-1">
+            <form class="search-form" id="qaForm" role="search">
+                <div class="search-wrapper">
+                    <label for="question" class="question-label">Your Question:</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-search search-icon" aria-hidden="true"></i>
+                        <input type="text" 
+                               id="question" 
+                               name="question" 
+                               placeholder="Ask any question (e.g., 'Tell me about quantum physics')" 
+                               required
+                               aria-required="true"
+                               aria-describedby="questionHelp">
+                    </div>
+                    <div id="questionHelp" class="help-text">
+                        Type your question and press Enter or click the Search button
+                    </div>
+                </div>
+                <button type="submit" class="submit-btn">
+                    <i class="fas fa-paper-plane" aria-hidden="true"></i>
+                    <span>Search for Answer</span>
+                </button>
+            </form>
+
+            <div id="loading" class="loading" role="status" aria-live="polite" style="display: none;">
+                <i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
+                <span>Searching for your answer...</span>
+                <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+
+            <div id="spellCorrection" class="spell-correction" tabindex="0" role="button" style="display: none;">
+                <i class="fas fa-spell-check" aria-hidden="true"></i>
+                <span>Did you mean: </span>
+                <span id="correctedText" aria-live="polite"></span>
+            </div>
+
+            <div id="result" class="result" aria-live="polite" style="display: none;">
+                <section class="main-answer" aria-labelledby="mainAnswerTitle">
+                    <div class="answer-header">
+                        <i class="fas fa-lightbulb" aria-hidden="true"></i>
+                        <h2 id="mainAnswerTitle">Main Answer</h2>
+                    </div>
+                    <div id="mainAnswer" class="answer-content"></div>
+                    <!-- Add text-to-speech button -->
+                    <button type="button" class="tts-button" aria-label="Listen to answer" onclick="speakText('mainAnswer')">
+                        <i class="fas fa-volume-up" aria-hidden="true"></i>
+                        <span>Listen</span>
+                    </button>
+                </section>
+                
+                <section id="sections" class="sections" aria-labelledby="sectionsTitle" style="display: none;">
+                    <div class="section-header">
+                        <i class="fas fa-book-open" aria-hidden="true"></i>
+                        <h2 id="sectionsTitle">Additional Information</h2>
+                    </div>
+                    <div id="sectionsContent"></div>
+                </section>
+                
+                <section id="additionalSources" class="additional-sources" aria-labelledby="sourcesTitle" style="display: none;">
+                    <div class="sources-header">
+                        <i class="fas fa-external-link-alt" aria-hidden="true"></i>
+                        <h2 id="sourcesTitle">Additional Sources</h2>
+                    </div>
+                    <div id="sourcesContent"></div>
+                </section>
+            </div>
+            
+            <section id="images" class="image-gallery" aria-labelledby="imagesTitle" style="display: none;">
+                <div class="gallery-header">
+                    <i class="fas fa-images" aria-hidden="true"></i>
+                    <h2 id="imagesTitle">Related Images</h2>
+                </div>
+                <div class="image-container" role="list"></div>
+            </section>
+        </main>
+
+        <footer role="contentinfo">
+            <div class="accessibility-info">
+                <h2>Accessibility Features</h2>
+                <ul>
+                    <li>Press Tab to navigate</li>
+                    <li>Press Enter or Space to activate buttons</li>
+                    <li>Press Alt + 1 for main content</li>
+                    <li>Press Ctrl + + or - to zoom</li>
+                </ul>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // Text size adjustment
+        let currentTextSize = 100;
+        function adjustTextSize(change) {
+            currentTextSize += change * 10;
+            currentTextSize = Math.max(70, Math.min(150, currentTextSize));
+            document.body.style.fontSize = `${currentTextSize}%`;
+            localStorage.setItem('textSize', currentTextSize);
+        }
+
+        function resetTextSize() {
+            currentTextSize = 100;
+            document.body.style.fontSize = '100%';
+            localStorage.setItem('textSize', currentTextSize);
+        }
+
+        // High contrast mode
+        function toggleContrast() {
+            document.body.classList.toggle('high-contrast');
+            localStorage.setItem('highContrast', document.body.classList.contains('high-contrast'));
+        }
+
+        // Text to speech
+        function speakText(elementId) {
+            const text = document.getElementById(elementId).textContent;
+            const utterance = new SpeechSynthesisUtterance(text);
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.altKey && e.key === '1') {
+                document.getElementById('mainContent').focus();
+            }
+        });
+
+        // Form submission
+        document.getElementById('qaForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const question = document.getElementById('question').value;
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            const mainAnswer = document.getElementById('mainAnswer');
+            const sections = document.getElementById('sections');
+            const sectionsContent = document.getElementById('sectionsContent');
+            const additionalSources = document.getElementById('additionalSources');
+            const sourcesContent = document.getElementById('sourcesContent');
+            const imagesSection = document.getElementById('images');
+            const imageContainer = imagesSection.querySelector('.image-container');
+            const spellCorrection = document.getElementById('spellCorrection');
+            const correctedText = document.getElementById('correctedText');
+            
+            // Show loading state
+            loading.style.display = 'flex';
+            result.style.display = 'none';
+            imagesSection.style.display = 'none';
+            spellCorrection.style.display = 'none';
+            sections.style.display = 'none';
+            additionalSources.style.display = 'none';
+            imageContainer.innerHTML = '';
+            
+            try {
+                const response = await fetch('/ask', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ question }),
+                });
+                
+                const data = await response.json();
+                
+                if (typeof data.answer === 'string') {
+                    mainAnswer.textContent = data.answer;
+                } else {
+                    // Display main answer
+                    mainAnswer.textContent = data.answer.main_answer;
+                    
+                    // Display sections
+                    if (data.answer.sections && data.answer.sections.length > 0) {
+                        sectionsContent.innerHTML = data.answer.sections.map(section => `
+                            <article class="section">
+                                <div class="section-title">
+                                    <i class="fas fa-bookmark" aria-hidden="true"></i>
+                                    <h3>${section.title}</h3>
+                                </div>
+                                <p>${section.content}</p>
+                                <button type="button" class="tts-button" onclick="speakText('section-${section.title.replace(/\s+/g, '-')}')">
+                                    <i class="fas fa-volume-up" aria-hidden="true"></i>
+                                    <span>Listen</span>
+                                </button>
+                            </article>
+                        `).join('');
+                        sections.style.display = 'block';
+                    }
+                    
+                    // Display sources
+                    if (data.answer.additional_sources && data.answer.additional_sources.length > 0) {
+                        sourcesContent.innerHTML = data.answer.additional_sources.map(source => `
+                            <article class="source">
+                                <div class="source-title">
+                                    <i class="fas fa-${source.source === 'Wikipedia' ? 'wikipedia-w' : 'globe'}" aria-hidden="true"></i>
+                                    <h3>${source.title}</h3>
+                                </div>
+                                <p>${source.summary || ''}</p>
+                                <a href="${source.url}" 
+                                   target="_blank" 
+                                   rel="noopener"
+                                   class="source-link"
+                                   aria-label="Read more about ${source.title} at ${source.source} (opens in new tab)">
+                                    <i class="fas fa-external-link-alt" aria-hidden="true"></i>
+                                    <span>Read more at ${source.source}</span>
+                                </a>
+                            </article>
+                        `).join('');
+                        additionalSources.style.display = 'block';
+                    }
+                }
+                
+                result.style.display = 'block';
+                
+                // Handle spell correction
+                if (data.corrected_question) {
+                    correctedText.textContent = data.corrected_question;
+                    spellCorrection.style.display = 'flex';
+                    spellCorrection.setAttribute('aria-label', `Did you mean: ${data.corrected_question}? Click to use this suggestion`);
+                }
+                
+                // Handle images
+                if (data.images && data.images.length > 0) {
+                    data.images.forEach((imageUrl, index) => {
+                        const imgWrapper = document.createElement('div');
+                        imgWrapper.className = 'image-wrapper';
+                        imgWrapper.setAttribute('role', 'listitem');
+                        
+                        const img = document.createElement('img');
+                        img.src = imageUrl;
+                        img.alt = `Related image ${index + 1} for "${question}"`;
+                        img.loading = 'lazy';
+                        
+                        // Add image description button
+                        const descBtn = document.createElement('button');
+                        descBtn.className = 'image-desc-btn';
+                        descBtn.innerHTML = '<i class="fas fa-info-circle" aria-hidden="true"></i><span>Image Description</span>';
+                        descBtn.setAttribute('aria-label', `Show description for image ${index + 1}`);
+                        
+                        imgWrapper.appendChild(img);
+                        imgWrapper.appendChild(descBtn);
+                        imageContainer.appendChild(imgWrapper);
+                    });
+                    imagesSection.style.display = 'block';
+                }
+            } catch (error) {
+                mainAnswer.innerHTML = `
+                    <div class="error" role="alert">
+                        <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+                        <span>Error: Could not get an answer. Please try again.</span>
+                    </div>
+                `;
+                result.style.display = 'block';
+            } finally {
+                loading.style.display = 'none';
+            }
+        });
+
+        // Initialize accessibility features
+        document.addEventListener('DOMContentLoaded', () => {
+            // Restore text size
+            const savedTextSize = localStorage.getItem('textSize');
+            if (savedTextSize) {
+                currentTextSize = parseInt(savedTextSize);
+                document.body.style.fontSize = `${currentTextSize}%`;
+            }
+
+            // Restore contrast mode
+            const savedContrast = localStorage.getItem('highContrast');
+            if (savedContrast === 'true') {
+                document.body.classList.add('high-contrast');
+            }
+        });
+
+        // Handle spell correction
+        const spellCorrection = document.getElementById('spellCorrection');
+        spellCorrection.addEventListener('click', handleSpellCorrection);
+        spellCorrection.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleSpellCorrection();
+            }
+        });
+
+        function handleSpellCorrection() {
+            const correctedText = document.getElementById('correctedText').textContent;
+            document.getElementById('question').value = correctedText;
+            document.getElementById('qaForm').dispatchEvent(new Event('submit'));
+        }
+    </script>
+</body>
+</html>
